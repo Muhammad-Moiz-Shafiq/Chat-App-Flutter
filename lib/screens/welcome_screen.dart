@@ -67,7 +67,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   child: AnimatedTextKit(
                     repeatForever: true,
                     animatedTexts: [
-                      TypewriterAnimatedText('Flash Chat'),
+                      TypewriterAnimatedText('Flash Chat',
+                          speed: Duration(milliseconds: 90)),
                     ],
                     onTap: () {
                       //print('jjjo');

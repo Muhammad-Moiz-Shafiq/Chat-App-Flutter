@@ -1,3 +1,4 @@
+import 'package:flash_chat/auth/auth_services.dart';
 import 'package:flash_chat/constants.dart';
 import 'package:flash_chat/screens/chat_screen.dart';
 import 'package:flash_chat/screens/home_page.dart';
@@ -13,17 +14,34 @@ class RegistrationScreen extends StatefulWidget {
 }
 
 class _RegistrationScreenState extends State<RegistrationScreen> {
-  late String email, password;
+  late String email, password, displayName;
   final _auth = FirebaseAuth.instance;
   final usernameController = TextEditingController(),
+      emailController = TextEditingController(),
       passwordController = TextEditingController();
   bool showSpinner = false;
+
+  void register() async {
+    setState(() {
+      showSpinner = true;
+      usernameController.clear();
+      passwordController.clear();
+      emailController.clear();
+    });
+    await AuthService()
+        .registerWithEmailAndPassword(email, password, displayName);
+    setState(() {
+      showSpinner = false;
+    });
+    Navigator.pushNamed(context, HomePage.id);
+  }
 
   @override
   void dispose() {
     super.dispose();
     usernameController.dispose();
     passwordController.dispose();
+    emailController.dispose();
   }
 
   @override
@@ -55,13 +73,27 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 textAlign: TextAlign.center,
                 keyboardType: TextInputType.emailAddress,
                 onChanged: (value) {
+                  displayName = value;
+                  //Do something with the user input.
+                },
+                decoration:
+                    kTextFieldDecor.copyWith(hintText: 'Enter your Name'),
+              ),
+              const SizedBox(
+                height: 8.0,
+              ),
+              TextField(
+                controller: emailController,
+                textAlign: TextAlign.center,
+                keyboardType: TextInputType.emailAddress,
+                onChanged: (value) {
                   email = value;
                   //Do something with the user input.
                 },
                 decoration:
                     kTextFieldDecor.copyWith(hintText: 'Enter your email'),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 8.0,
               ),
               TextField(
@@ -75,30 +107,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 decoration:
                     kTextFieldDecor.copyWith(hintText: 'Enter your password'),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 24.0,
               ),
               CustomButtons(
                 color: Colors.blueAccent,
                 title: 'Register',
-                onPress: () async {
-                  setState(() {
-                    showSpinner = true;
-                    usernameController.clear();
-                    passwordController.clear();
-                  });
-                  try {
-                    final newUser = await _auth.createUserWithEmailAndPassword(
-                        email: email, password: password);
-                    if (newUser != null)
-                      Navigator.pushNamed(context, HomePage.id);
-                    setState(() {
-                      showSpinner = false;
-                    });
-                  } catch (e) {
-                    print(e);
-                  }
-                },
+                onPress: register,
               ),
             ],
           ),

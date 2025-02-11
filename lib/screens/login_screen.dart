@@ -7,10 +7,13 @@ import 'package:flash_chat/customWidgets.dart';
 import 'package:flash_chat/constants.dart';
 import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
 
+import '../Components/my_snackbar.dart';
 import 'forgot_pw.dart';
 
 class LoginScreen extends StatefulWidget {
   static const String id = 'login';
+
+  const LoginScreen({super.key});
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
@@ -50,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 48.0,
               ),
               TextField(
@@ -64,7 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration:
                     kTextFieldDecor.copyWith(hintText: 'Enter your email'),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 8.0,
               ),
               TextField(
@@ -78,15 +81,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration:
                     kTextFieldDecor.copyWith(hintText: 'Enter your password'),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 10,
               ),
               GestureDetector(
                 onTap: () {
                   Navigator.pushNamed(context, ForgotPw.id);
                 },
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 12.0),
+                child: const Padding(
+                  padding: EdgeInsets.only(left: 12.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -102,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 15.0,
               ),
               CustomButtons(
@@ -122,37 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   } catch (e) {
                     print(e);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        backgroundColor: Colors.lightBlueAccent,
-                        content: Row(
-                          children: [
-                            Icon(
-                              Icons.error,
-                              color: Colors.red,
-                            ),
-                            SizedBox(
-                              width: 8,
-                            ),
-                            Text(
-                              'Invalid credentials. Kindly Try Again',
-                              style: TextStyle(
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15.0)),
-                        behavior: SnackBarBehavior.floating,
-                        duration: Duration(seconds: 10),
-                        action: SnackBarAction(
-                          label: 'Go Back',
-                          textColor: Colors.white,
-                          onPressed: () {
-                            Navigator.pushNamed(context, WelcomeScreen.id);
-                          },
-                        ),
-                      ),
+                      const MySnackBar() as SnackBar,
                     );
                   }
                 },

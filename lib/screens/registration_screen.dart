@@ -23,12 +23,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   bool showSpinner = false;
 
   void register() async {
-    if (password.length < 6) {
+    if (passwordController.text.length < 6) {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Invalid Password'),
-          content: const Text('Password should be at least 6 characters long'),
+          content: const Text('Password should be at least 6 characters long.'),
           actions: [
             TextButton(
               onPressed: () {
@@ -44,35 +44,40 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ],
         ),
       );
+      return;
     }
-    if (email.isNotEmpty &&
-        password.isNotEmpty &&
-        displayName.isNotEmpty &&
-        (email.endsWith('@gmail.com') ||
-            email.endsWith('@yahoo.com') ||
-            email.endsWith('@hotmail.com') ||
-            email.endsWith('@outlook.com'))) {
+    
+    if (emailController.text.isNotEmpty &&
+        passwordController.text.isNotEmpty &&
+        usernameController.text.isNotEmpty &&
+        (emailController.text.endsWith('@gmail.com') ||
+            emailController.text.endsWith('@yahoo.com') ||
+            emailController.text.endsWith('@hotmail.com') ||
+            emailController.text.endsWith('@outlook.com'))) {
       try {
         setState(() {
           showSpinner = true;
-          usernameController.clear();
-          passwordController.clear();
-          emailController.clear();
         });
         await AuthService()
             .registerWithEmailAndPassword(email, password, displayName);
         setState(() {
           showSpinner = false;
+          usernameController.clear();
+          passwordController.clear();
+          emailController.clear();
         });
         Navigator.pushNamed(context, HomePage.id);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const MySnackBar() as SnackBar,
+          createMySnackBar(context),
         );
+        setState(() {
+          showSpinner = false;
+        });
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const MySnackBar() as SnackBar,
+        createMySnackBar(context),
       );
     }
   }

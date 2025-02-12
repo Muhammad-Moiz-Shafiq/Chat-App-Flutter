@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../Components/drawer.dart';
 import '../Components/userTile.dart';
+import 'new_chat.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -19,6 +20,9 @@ class _HomePageState extends State<HomePage> {
   final _auth = AuthService();
   final _firestore = FirebaseFirestore.instance;
   late final loggedInUser;
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+
   void getCurrentUser() {
     final user = _auth.currentUser;
     if (user != null) {
@@ -38,46 +42,53 @@ class _HomePageState extends State<HomePage> {
     getCurrentUser();
   }
 
-  StreamBuilder<QuerySnapshot> GetUserIDs() {
+  StreamBuilder<QuerySnapshot> searchUsers(String query) {
     return StreamBuilder<QuerySnapshot>(
-        stream: _firestore
-            .collection('users')
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(
-              child: CircularProgressIndicator(
-                backgroundColor: Colors.lightBlue,
-              ),
-            );
-          }
-          final userIDs = snapshot.data?.docs;
-          List<UserTile> userTiles = [];
-          for (var userID in userIDs!) {
-            final temp = userID.data()! as Map<String, dynamic>;
-            final senderEmail = temp['email'];
-            final name = temp['name'];
-            final currentUser = loggedInUser?.email;
+      stream: _firestore.collection('users').snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(
+            child: CircularProgressIndicator(
+              backgroundColor: Colors.lightBlue,
+            ),
+          );
+        }
+
+        final userIDs = snapshot.data?.docs;
+        List<UserTile> userTiles = [];
+
+        for (var userID in userIDs!) {
+          final temp = userID.data()! as Map<String, dynamic>;
+          final senderEmail = temp['email'].toString();
+          final name = temp['name'].toString();
+          final currentUser = loggedInUser?.email;
+
+          if (query.isEmpty ||
+              name.toLowerCase().contains(query.toLowerCase()) ||
+              senderEmail.toLowerCase().contains(query.toLowerCase())) {
             final userName = UserTile(
-                onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) {
-                    return ChatScreen(
-                      senderName: name,
-                      senderEmail: senderEmail,
-                    );
-                  }));
-                },
-                idName: senderEmail,
-                displayName: name,
-                isMe: currentUser == senderEmail);
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) {
+                  return ChatScreen(
+                    senderName: name,
+                    senderEmail: senderEmail,
+                  );
+                }));
+              },
+              idName: senderEmail,
+              displayName: name,
+              isMe: currentUser == senderEmail,
+            );
             userTiles.add(userName);
           }
-          return ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            children: userTiles,
-          );
-        });
+        }
+
+        return ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          children: userTiles,
+        );
+      },
+    );
   }
 
   @override
@@ -127,21 +138,160 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
           centerTitle: true,
-          title: Text('⚡️Chat'),
+          title: _isSearching
+              ? TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search by name or email...',
+                    border: InputBorder.none,
+                    hintStyle: TextStyle(color: Colors.white70),
+                  ),
+                  style: TextStyle(color: Colors.white),
+                  onChanged: (value) {
+                    setState(() {});
+                  },
+                )
+              : Text('⚡️Chat'),
           backgroundColor: Colors.lightBlueAccent,
           actions: <Widget>[
-            IconButton(icon: Icon(Icons.search), onPressed: () {}),
+            IconButton(
+              icon: Icon(_isSearching ? Icons.close : Icons.search),
+              onPressed: () {
+                setState(() {
+                  _isSearching = !_isSearching;
+                  if (!_isSearching) {
+                    _searchController.clear();
+                  }
+                });
+              },
+            ),
           ],
         ),
         drawer: MyDrawer(
           userName: _auth.getUserDisplayName(),
         ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            Navigator.pushNamed(context, NewChatAdder.id);
+          },
+          child: Icon(Icons.add),
+          backgroundColor: Colors.lightBlueAccent,
+          foregroundColor: Theme.of(context).colorScheme.inversePrimary,
+          tooltip: 'Click to tart a chat with other users',
+        ),
         body: Column(
           children: [
-            Expanded(child: GetUserIDs()),
+            Expanded(
+              child: _isSearching
+                  ? searchUsers(_searchController.text)
+                  : StreamBuilder<QuerySnapshot>(
+                      stream: _firestore
+                          .collection('messages')
+                          .orderBy('timestamp', descending: true)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(
+                              backgroundColor: Colors.lightBlue,
+                            ),
+                          );
+                        }
+
+                        Map<String, Map<String, dynamic>> latestMessages = {};
+                        final messages = snapshot.data?.docs;
+
+                        for (var message in messages!) {
+                          final messageData =
+                              message.data() as Map<String, dynamic>;
+                          final sender = messageData['sender'];
+                          final receiver = messageData['receiver'];
+                          final currentUserEmail = loggedInUser?.email;
+
+                          if (sender != currentUserEmail &&
+                              receiver != currentUserEmail) {
+                            continue;
+                          }
+
+                          final otherUser =
+                              sender == currentUserEmail ? receiver : sender;
+
+                          if (!latestMessages.containsKey(otherUser) ||
+                              (messageData['timestamp'] != null &&
+                                  (latestMessages[otherUser]!['timestamp'] ==
+                                          null ||
+                                      messageData['timestamp'].toDate().isAfter(
+                                          latestMessages[otherUser]![
+                                                  'timestamp']
+                                              .toDate())))) {
+                            latestMessages[otherUser] = messageData;
+                          }
+                        }
+
+                        return FutureBuilder<List<UserTile>>(
+                          future: _buildUserTiles(latestMessages),
+                          builder: (context, userTilesSnapshot) {
+                            if (!userTilesSnapshot.hasData) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+
+                            return ListView(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              children: userTilesSnapshot.data!,
+                            );
+                          },
+                        );
+                      },
+                    ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Future<List<UserTile>> _buildUserTiles(
+      Map<String, Map<String, dynamic>> latestMessages) async {
+    List<UserTile> userTiles = [];
+
+    for (var entry in latestMessages.entries) {
+      final userDoc = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: entry.key)
+          .get();
+
+      if (userDoc.docs.isNotEmpty) {
+        final userData = userDoc.docs.first.data();
+        final userName = userData['name'];
+        final userEmail = userData['email'];
+
+        // Get the last message details
+        final lastMessageData = entry.value;
+        final lastMessageText = lastMessageData['text'] as String?;
+        final timestamp = lastMessageData['timestamp'] as Timestamp?;
+        final DateTime? lastMessageTime = timestamp?.toDate();
+
+        final userTile = UserTile(
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) {
+              return ChatScreen(
+                senderName: userName,
+                senderEmail: userEmail,
+              );
+            }));
+          },
+          displayName: userName,
+          isMe: loggedInUser?.email == userEmail,
+          lastMessage: lastMessageText,
+          lastMessageTime: lastMessageTime,
+        );
+        userTiles.add(userTile);
+      }
+    }
+
+    return userTiles;
   }
 }

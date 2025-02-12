@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flash_chat/screens/new_chat.dart';
 import 'package:flash_chat/theme/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'firebase_options.dart';
@@ -18,9 +19,6 @@ void main() async {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
-      print("Firebase initialized successfully.");
-    } else {
-      print("Firebase is already initialized.");
     }
   } catch (e) {
     print("Firebase initialization error: $e");
@@ -48,6 +46,7 @@ class FlashChat extends StatelessWidget {
         ForgotPw.id: (context) => ForgotPw(),
         HomePage.id: (context) => HomePage(),
         SettingsPage.id: (context) => SettingsPage(),
+        NewChatAdder.id: (context) => NewChatAdder(),
       },
     );
   }

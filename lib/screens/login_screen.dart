@@ -24,7 +24,8 @@ class _LoginScreenState extends State<LoginScreen> {
   bool showSpinner = false;
 
   void login() async {
-    if (email.isNotEmpty && password.isNotEmpty) {
+    if (usernameController.text.isNotEmpty &&
+        passwordController.text.isNotEmpty) {
       setState(() {
         showSpinner = true;
         usernameController.clear();
@@ -38,12 +39,15 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const MySnackBar() as SnackBar,
+          createMySnackBar(context),
         );
+        setState(() {
+          showSpinner = false;
+        });
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const MySnackBar() as SnackBar,
+        createMySnackBar(context),
       );
     }
   }

@@ -1,12 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flash_chat/screens/chat_screen.dart';
+import 'package:flash_chat/auth/auth_services.dart';
 import 'package:flash_chat/screens/home_page.dart';
-import 'package:flash_chat/screens/welcome_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flash_chat/customWidgets.dart';
 import 'package:flash_chat/constants.dart';
 import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
-
 import '../Components/my_snackbar.dart';
 import 'forgot_pw.dart';
 
@@ -25,6 +23,31 @@ class _LoginScreenState extends State<LoginScreen> {
       passwordController = TextEditingController();
   bool showSpinner = false;
 
+  void login() async {
+    if (email.isNotEmpty && password.isNotEmpty) {
+      setState(() {
+        showSpinner = true;
+        usernameController.clear();
+        passwordController.clear();
+      });
+      try {
+        await AuthService().signInWithEmailAndPassword(email, password);
+        Navigator.pushNamed(context, HomePage.id);
+        setState(() {
+          showSpinner = false;
+        });
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const MySnackBar() as SnackBar,
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const MySnackBar() as SnackBar,
+      );
+    }
+  }
+
   @override
   void dispose() {
     super.dispose();
@@ -35,11 +58,11 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: ModalProgressHUD(
         inAsyncCall: showSpinner,
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -109,26 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 height: 15.0,
               ),
               CustomButtons(
-                onPress: () async {
-                  setState(() {
-                    showSpinner = true;
-                    usernameController.clear();
-                    passwordController.clear();
-                  });
-                  try {
-                    final status = await _auth.signInWithEmailAndPassword(
-                        email: email, password: password);
-                    Navigator.pushNamed(context, HomePage.id);
-                    setState(() {
-                      showSpinner = false;
-                    });
-                  } catch (e) {
-                    print(e);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const MySnackBar() as SnackBar,
-                    );
-                  }
-                },
+                onPress: login,
                 color: Colors.lightBlueAccent,
                 title: 'Log in',
               ),

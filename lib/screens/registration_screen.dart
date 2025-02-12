@@ -1,11 +1,12 @@
 import 'package:flash_chat/auth/auth_services.dart';
 import 'package:flash_chat/constants.dart';
-import 'package:flash_chat/screens/chat_screen.dart';
 import 'package:flash_chat/screens/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flash_chat/customWidgets.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
+
+import '../Components/my_snackbar.dart';
 
 class RegistrationScreen extends StatefulWidget {
   static const String id = 'reg';
@@ -22,18 +23,58 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   bool showSpinner = false;
 
   void register() async {
-    setState(() {
-      showSpinner = true;
-      usernameController.clear();
-      passwordController.clear();
-      emailController.clear();
-    });
-    await AuthService()
-        .registerWithEmailAndPassword(email, password, displayName);
-    setState(() {
-      showSpinner = false;
-    });
-    Navigator.pushNamed(context, HomePage.id);
+    if (password.length < 6) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Invalid Password'),
+          content: const Text('Password should be at least 6 characters long'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'OK',
+                style: TextStyle(
+                  color: Colors.blueAccent,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    if (email.isNotEmpty &&
+        password.isNotEmpty &&
+        displayName.isNotEmpty &&
+        (email.endsWith('@gmail.com') ||
+            email.endsWith('@yahoo.com') ||
+            email.endsWith('@hotmail.com') ||
+            email.endsWith('@outlook.com'))) {
+      try {
+        setState(() {
+          showSpinner = true;
+          usernameController.clear();
+          passwordController.clear();
+          emailController.clear();
+        });
+        await AuthService()
+            .registerWithEmailAndPassword(email, password, displayName);
+        setState(() {
+          showSpinner = false;
+        });
+        Navigator.pushNamed(context, HomePage.id);
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const MySnackBar() as SnackBar,
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const MySnackBar() as SnackBar,
+      );
+    }
   }
 
   @override
@@ -47,7 +88,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: ModalProgressHUD(
         inAsyncCall: showSpinner,
         child: Padding(

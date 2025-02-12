@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flash_chat/auth/auth_services.dart';
 import 'package:flash_chat/screens/chat_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../Components/drawer.dart';
 import '../Components/userTile.dart';
@@ -15,18 +16,13 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final _auth = FirebaseAuth.instance;
+  final _auth = AuthService();
   final _firestore = FirebaseFirestore.instance;
-  late User loggedInUser;
+  late final loggedInUser;
   void getCurrentUser() {
-    try {
-      final user = _auth.currentUser;
-      if (user != null) {
-        loggedInUser = user;
-        print(loggedInUser.email);
-      }
-    } catch (e) {
-      print(e);
+    final user = _auth.currentUser;
+    if (user != null) {
+      loggedInUser = user;
     }
   }
 
@@ -36,11 +32,17 @@ class _HomePageState extends State<HomePage> {
     Navigator.pop(context);
   }
 
+  @override
+  void initState() {
+    super.initState();
+    getCurrentUser();
+  }
+
   StreamBuilder<QuerySnapshot> GetUserIDs() {
     return StreamBuilder<QuerySnapshot>(
         stream: _firestore
-            .collection('messages')
-            .orderBy('timestamp', descending: true)
+            .collection('users')
+            .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
@@ -50,41 +52,96 @@ class _HomePageState extends State<HomePage> {
               ),
             );
           }
-          final messages = snapshot.data?.docs;
+          final userIDs = snapshot.data?.docs;
           List<UserTile> userTiles = [];
-          for (var message in messages!) {
-            final temp = message.data()! as Map<String, dynamic>;
-            //final messageText = temp['text'];
-            final senderName = temp['sender'];
-            final currentUser = loggedInUser.email;
-            final userName = UserTile(() {
-              Navigator.pushNamed(context, ChatScreen.id);
-            }, senderName, currentUser == senderName);
+          for (var userID in userIDs!) {
+            final temp = userID.data()! as Map<String, dynamic>;
+            final senderEmail = temp['email'];
+            final name = temp['name'];
+            final currentUser = loggedInUser?.email;
+            final userName = UserTile(
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) {
+                    return ChatScreen(
+                      senderName: name,
+                      senderEmail: senderEmail,
+                    );
+                  }));
+                },
+                idName: senderEmail,
+                displayName: name,
+                isMe: currentUser == senderEmail);
             userTiles.add(userName);
           }
-          return Expanded(
-            child: ListView(
-              reverse: true,
-              padding: EdgeInsets.symmetric(horizontal: 15, vertical: 20),
-              children: userTiles,
-            ),
+          return ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            children: userTiles,
           );
         });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: Text('⚡️Chat'),
-        backgroundColor: Colors.lightBlueAccent,
-        actions: <Widget>[
-          IconButton(icon: Icon(Icons.logout), onPressed: logout),
-        ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (!didPop) {
+          bool exitApp = await showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text("Exit App?"),
+              content: Text("Are you sure you want to exit?"),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text(
+                    "Cancel",
+                    style: TextStyle(
+                      color: Colors.blue,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
+                    AuthService().signOut();
+                    SystemNavigator.pop(); // Exit the app
+                  },
+                  child: Text(
+                    "Exit",
+                    style: TextStyle(
+                      color: Colors.red,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+
+          if (exitApp == true) {
+            SystemNavigator.pop(); // Exit the app
+          }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        appBar: AppBar(
+          centerTitle: true,
+          title: Text('⚡️Chat'),
+          backgroundColor: Colors.lightBlueAccent,
+          actions: <Widget>[
+            IconButton(icon: Icon(Icons.search), onPressed: () {}),
+          ],
+        ),
+        drawer: MyDrawer(
+          userName: _auth.getUserDisplayName(),
+        ),
+        body: Column(
+          children: [
+            Expanded(child: GetUserIDs()),
+          ],
+        ),
       ),
-      drawer: MyDrawer(),
-      body: GetUserIDs(),
     );
   }
 }

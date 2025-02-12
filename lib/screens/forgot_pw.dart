@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flash_chat/auth/auth_services.dart';
 import 'package:flash_chat/customWidgets.dart';
 import 'package:flutter/material.dart';
-
 import '../constants.dart';
 
 class ForgotPw extends StatefulWidget {
@@ -18,15 +18,17 @@ class _ForgotPwState extends State<ForgotPw> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Text('⚡️Chat'),
+        title: const Text('⚡️Chat'),
         backgroundColor: Colors.lightBlueAccent,
       ),
-      body: ResetMenu(),
+      body: const ResetMenu(),
     );
   }
 }
 
 class ResetMenu extends StatefulWidget {
+  const ResetMenu({super.key});
+
   @override
   State<ResetMenu> createState() => _ResetMenuState();
 }
@@ -44,20 +46,24 @@ class _ResetMenuState extends State<ResetMenu> {
           Text(
             'Enter your email and we will send you a reset password link:',
             style: TextStyle(
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.surface == Colors.white
+                  ? Colors.black
+                  : Colors.white,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(
-            height: 10,
+          const SizedBox(
+            height: 30,
           ),
           TextField(
             textAlign: TextAlign.center,
             keyboardType: TextInputType.emailAddress,
             onChanged: (value) {
-              email = value;
               //Do something with the user input.
+              setState(() {
+                email = value;
+              });
             },
             decoration: kTextFieldDecor.copyWith(hintText: 'Enter your email'),
           ),
@@ -66,14 +72,24 @@ class _ResetMenuState extends State<ResetMenu> {
               title: 'Reset Password',
               onPress: () async {
                 try {
-                  await FirebaseAuth.instance
-                      .sendPasswordResetEmail(email: email);
+                  await AuthService().sendPasswordResetEmail(email: email);
                   showDialog(
                       context: context,
                       builder: (context) {
                         return AlertDialog(
-                          content: Text(
+                          title: const Text('Reset Password'),
+                          content: const Text(
                               'A mail has been sent to your e-mail. Kindly check your mails.'),
+                          actions: [
+                            TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  setState(() {
+                                    email = '';
+                                  });
+                                },
+                                child: const Text('OK'))
+                          ],
                         );
                       });
                 } on FirebaseAuthException catch (e) {

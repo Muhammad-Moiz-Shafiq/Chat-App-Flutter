@@ -8,6 +8,9 @@ late User loggedInUser;
 
 class ChatScreen extends StatefulWidget {
   static const String id = 'chat';
+  late String senderName;
+  late String senderEmail;
+  ChatScreen({super.key, required this.senderName, required this.senderEmail});
   @override
   _ChatScreenState createState() => _ChatScreenState();
 }
@@ -51,17 +54,8 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: null,
-        actions: <Widget>[
-          IconButton(
-              icon: Icon(Icons.logout),
-              onPressed: () {
-                _auth.signOut();
-                Navigator.pop(context);
-                //Implement logout functionality
-              }),
-        ],
-        title: Text('⚡️Chat'),
+        title: Text(widget.senderName),
+        centerTitle: true,
         backgroundColor: Colors.lightBlueAccent,
       ),
       body: SafeArea(
@@ -86,18 +80,26 @@ class _ChatScreenState extends State<ChatScreen> {
                   List<MessageBubble> messageWidgets = [];
                   for (var message in messages!) {
                     final temp = message.data()! as Map<String, dynamic>;
-                    final messageText = temp['text'];
-                    final senderName = temp['sender'];
-                    final currentUser = loggedInUser.email;
-                    final textWidget = MessageBubble(
-                        messageText, senderName, currentUser == senderName);
-                    messageWidgets.add(textWidget);
+                    if (temp['sender'] == loggedInUser.email &&
+                            temp['receiver'] == widget.senderEmail ||
+                        temp['sender'] == widget.senderEmail &&
+                            temp['receiver'] == loggedInUser.email) {
+                      final messageText = temp['text'];
+                      final senderName = temp['sender'];
+                      final currentUser = loggedInUser.email;
+                      final textWidget = MessageBubble(
+                        messageText,
+                        widget.senderName,
+                        currentUser == senderName,
+                      );
+                      messageWidgets.add(textWidget);
+                    }
                   }
                   return Expanded(
                     child: ListView(
                       reverse: true,
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 15, vertical: 20),
                       children: messageWidgets,
                     ),
                   );
@@ -125,6 +127,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         _firestore.collection('messages').add({
                           'text': message,
                           'sender': loggedInUser.email,
+                          'receiver': widget.senderEmail,
                           'timestamp': FieldValue.serverTimestamp(),
                         });
                       } catch (e) {
@@ -148,7 +151,11 @@ class _ChatScreenState extends State<ChatScreen> {
 }
 
 class MessageBubble extends StatelessWidget {
-  const MessageBubble(this.messageText, this.senderName, this.isMe);
+  const MessageBubble(
+    this.messageText,
+    this.senderName,
+    this.isMe,
+  );
   final String messageText;
   final String senderName;
   final bool isMe;
@@ -161,31 +168,37 @@ class MessageBubble extends StatelessWidget {
             isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Text(
-            senderName,
-            style: TextStyle(
+            isMe ? 'You' : senderName,
+            style: const TextStyle(
               color: Colors.black54,
               fontSize: 14,
             ),
           ),
           Material(
             borderRadius: isMe
-                ? BorderRadius.only(
+                ? const BorderRadius.only(
                     topLeft: Radius.circular(30),
                     bottomLeft: Radius.circular(30),
                     bottomRight: Radius.circular(30))
-                : BorderRadius.only(
+                : const BorderRadius.only(
                     topRight: Radius.circular(30),
                     bottomLeft: Radius.circular(30),
                     bottomRight: Radius.circular(30)),
             elevation: 5.0,
-            color: isMe ? Colors.lightBlueAccent : Colors.grey.shade300,
+            color: isMe
+                ? Colors.lightBlueAccent
+                : Theme.of(context).colorScheme.inversePrimary,
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               child: Text(
                 messageText,
                 style: isMe
-                    ? TextStyle(fontSize: 20, color: Colors.white)
-                    : TextStyle(fontSize: 20, color: Colors.black),
+                    ? TextStyle(
+                        fontSize: 20,
+                        color: Theme.of(context).colorScheme.surface)
+                    : TextStyle(
+                        fontSize: 20,
+                        color: Theme.of(context).colorScheme.surface),
               ),
             ),
           ),

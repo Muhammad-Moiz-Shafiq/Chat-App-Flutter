@@ -1,5 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flash_chat/auth/auth_services.dart';
+import 'package:flash_chat/services/auth/auth_services.dart';
 import 'package:flash_chat/screens/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flash_chat/customWidgets.dart';

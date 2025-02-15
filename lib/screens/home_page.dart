@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flash_chat/auth/auth_services.dart';
+import 'package:flash_chat/services/auth/auth_services.dart';
 import 'package:flash_chat/screens/chat_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 
 import '../Components/drawer.dart';
 import '../Components/userTile.dart';
@@ -22,6 +23,13 @@ class _HomePageState extends State<HomePage> {
   late final loggedInUser;
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
+  
+  // Cache for user data
+  final Map<String, Map<String, dynamic>> _userCache = {};
+  
+  // Stream controllers
+  late Stream<QuerySnapshot> _messagesStream;
+  late Stream<QuerySnapshot> _usersStream;
 
   void getCurrentUser() {
     final user = _auth.currentUser;
@@ -40,11 +48,20 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     getCurrentUser();
+    // Initialize streams
+    _messagesStream = _firestore
+        .collection('messages')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+    _usersStream = _firestore
+        .collection('users')
+        .orderBy('name')
+        .snapshots();
   }
 
   StreamBuilder<QuerySnapshot> searchUsers(String query) {
     return StreamBuilder<QuerySnapshot>(
-      stream: _firestore.collection('users').snapshots(),
+      stream: _usersStream,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(
@@ -62,6 +79,9 @@ class _HomePageState extends State<HomePage> {
           final senderEmail = temp['email'].toString();
           final name = temp['name'].toString();
           final currentUser = loggedInUser?.email;
+
+          // Cache user data
+          _userCache[senderEmail] = temp;
 
           if (query.isEmpty ||
               name.toLowerCase().contains(query.toLowerCase()) ||
@@ -89,6 +109,60 @@ class _HomePageState extends State<HomePage> {
         );
       },
     );
+  }
+
+  Future<List<UserTile>> _buildUserTiles(
+      Map<String, Map<String, dynamic>> latestMessages) async {
+    List<UserTile> userTiles = [];
+
+    for (var entry in latestMessages.entries) {
+      Map<String, dynamic>? userData;
+      
+      // Check cache first
+      if (_userCache.containsKey(entry.key)) {
+        userData = _userCache[entry.key];
+      } else {
+        // Fetch from Firestore if not in cache
+        final userDoc = await _firestore
+            .collection('users')
+            .where('email', isEqualTo: entry.key)
+            .get();
+
+        if (userDoc.docs.isNotEmpty) {
+          userData = userDoc.docs.first.data();
+          // Update cache
+          _userCache[entry.key] = userData;
+        }
+      }
+
+      if (userData != null) {
+        final userName = userData['name'];
+        final userEmail = userData['email'];
+
+        final lastMessageData = entry.value;
+        final lastMessageText = lastMessageData['text'] as String?;
+        final timestamp = lastMessageData['timestamp'] as Timestamp?;
+        final DateTime? lastMessageTime = timestamp?.toDate();
+
+        final userTile = UserTile(
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) {
+              return ChatScreen(
+                senderName: userName,
+                senderEmail: userEmail,
+              );
+            }));
+          },
+          displayName: userName,
+          isMe: loggedInUser?.email == userEmail,
+          lastMessage: lastMessageText,
+          lastMessageTime: lastMessageTime,
+        );
+        userTiles.add(userTile);
+      }
+    }
+
+    return userTiles;
   }
 
   @override
@@ -185,10 +259,7 @@ class _HomePageState extends State<HomePage> {
               child: _isSearching
                   ? searchUsers(_searchController.text)
                   : StreamBuilder<QuerySnapshot>(
-                      stream: _firestore
-                          .collection('messages')
-                          .orderBy('timestamp', descending: true)
-                          .snapshots(),
+                      stream: _messagesStream,
                       builder: (context, snapshot) {
                         if (!snapshot.hasData) {
                           return const Center(
@@ -202,28 +273,22 @@ class _HomePageState extends State<HomePage> {
                         final messages = snapshot.data?.docs;
 
                         for (var message in messages!) {
-                          final messageData =
-                              message.data() as Map<String, dynamic>;
+                          final messageData = message.data() as Map<String, dynamic>;
                           final sender = messageData['sender'];
                           final receiver = messageData['receiver'];
                           final currentUserEmail = loggedInUser?.email;
 
-                          if (sender != currentUserEmail &&
-                              receiver != currentUserEmail) {
+                          if (sender != currentUserEmail && receiver != currentUserEmail) {
                             continue;
                           }
 
-                          final otherUser =
-                              sender == currentUserEmail ? receiver : sender;
+                          final otherUser = sender == currentUserEmail ? receiver : sender;
 
                           if (!latestMessages.containsKey(otherUser) ||
                               (messageData['timestamp'] != null &&
-                                  (latestMessages[otherUser]!['timestamp'] ==
-                                          null ||
+                                  (latestMessages[otherUser]!['timestamp'] == null ||
                                       messageData['timestamp'].toDate().isAfter(
-                                          latestMessages[otherUser]![
-                                                  'timestamp']
-                                              .toDate())))) {
+                                          latestMessages[otherUser]!['timestamp'].toDate())))) {
                             latestMessages[otherUser] = messageData;
                           }
                         }
@@ -232,9 +297,8 @@ class _HomePageState extends State<HomePage> {
                           future: _buildUserTiles(latestMessages),
                           builder: (context, userTilesSnapshot) {
                             if (!userTilesSnapshot.hasData) {
-                              return const Center(
-                                child: CircularProgressIndicator(),
-                              );
+                              // Return existing list while loading
+                              return const SizedBox();
                             }
 
                             return ListView(
@@ -253,45 +317,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Future<List<UserTile>> _buildUserTiles(
-      Map<String, Map<String, dynamic>> latestMessages) async {
-    List<UserTile> userTiles = [];
-
-    for (var entry in latestMessages.entries) {
-      final userDoc = await _firestore
-          .collection('users')
-          .where('email', isEqualTo: entry.key)
-          .get();
-
-      if (userDoc.docs.isNotEmpty) {
-        final userData = userDoc.docs.first.data();
-        final userName = userData['name'];
-        final userEmail = userData['email'];
-
-        // Get the last message details
-        final lastMessageData = entry.value;
-        final lastMessageText = lastMessageData['text'] as String?;
-        final timestamp = lastMessageData['timestamp'] as Timestamp?;
-        final DateTime? lastMessageTime = timestamp?.toDate();
-
-        final userTile = UserTile(
-          onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) {
-              return ChatScreen(
-                senderName: userName,
-                senderEmail: userEmail,
-              );
-            }));
-          },
-          displayName: userName,
-          isMe: loggedInUser?.email == userEmail,
-          lastMessage: lastMessageText,
-          lastMessageTime: lastMessageTime,
-        );
-        userTiles.add(userTile);
-      }
-    }
-
-    return userTiles;
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 }

@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flash_chat/auth/auth_services.dart';
+import 'package:flash_chat/services/auth/auth_services.dart';
 import 'package:flash_chat/screens/chat_screen.dart';
 import 'package:flutter/material.dart';
 import '../Components/userTile.dart';
@@ -30,10 +30,7 @@ class _NewChatAdderState extends State<NewChatAdder> {
 
   StreamBuilder<QuerySnapshot> GetUserIDs() {
     return StreamBuilder<QuerySnapshot>(
-        stream: _firestore
-            .collection('users')
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
+        stream: _firestore.collection('users').orderBy('name').snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(

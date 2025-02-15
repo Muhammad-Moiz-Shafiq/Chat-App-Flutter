@@ -1,4 +1,4 @@
-import 'package:flash_chat/auth/auth_services.dart';
+import 'package:flash_chat/services/auth/auth_services.dart';
 import 'package:flash_chat/constants.dart';
 import 'package:flash_chat/screens/home_page.dart';
 import 'package:flutter/material.dart';
@@ -46,7 +46,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       );
       return;
     }
-    
+
     if (emailController.text.isNotEmpty &&
         passwordController.text.isNotEmpty &&
         usernameController.text.isNotEmpty &&

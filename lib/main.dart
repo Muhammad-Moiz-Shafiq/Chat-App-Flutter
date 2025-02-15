@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flash_chat/screens/new_chat.dart';
+import 'package:flash_chat/services/notification/notification_services.dart';
 import 'package:flash_chat/theme/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'firebase_options.dart';
@@ -23,6 +24,7 @@ void main() async {
   } catch (e) {
     print("Firebase initialization error: $e");
   }
+  await NotificationServices.instance.initialize();
 
   runApp(
     ChangeNotifierProvider<ThemeProvider>(

@@ -169,8 +169,8 @@ class MessageBubble extends StatelessWidget {
         children: [
           Text(
             isMe ? 'You' : senderName,
-            style: const TextStyle(
-              color: Colors.black54,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.inversePrimary,
               fontSize: 14,
             ),
           ),

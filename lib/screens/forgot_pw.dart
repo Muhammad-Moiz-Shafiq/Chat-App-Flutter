@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flash_chat/auth/auth_services.dart';
 import 'package:flash_chat/customWidgets.dart';
 import 'package:flutter/material.dart';
 import '../constants.dart';
+import '../services/auth/auth_services.dart';
 
 class ForgotPw extends StatefulWidget {
   static const String id = 'forgot_pw';

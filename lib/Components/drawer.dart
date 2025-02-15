@@ -1,7 +1,7 @@
 import 'package:flash_chat/screens/welcome_screen.dart';
 import 'package:flutter/material.dart';
 
-import '../auth/auth_services.dart';
+import '../services/auth/auth_services.dart';
 import '../screens/settings.dart';
 import 'my_drawer_tile.dart';
 

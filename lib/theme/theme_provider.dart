@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 ThemeData lightMode = ThemeData(
   colorScheme: ColorScheme.light(
@@ -21,13 +22,34 @@ ThemeData darkMode = ThemeData(
 
 class ThemeProvider extends ChangeNotifier {
   ThemeData _themeData = lightMode;
+  final String _themePreferenceKey = 'theme_preference';
+
+  ThemeProvider() {
+    _loadThemePreference();
+  }
+
+  // Load saved theme preference
+  Future<void> _loadThemePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isDark = prefs.getBool(_themePreferenceKey) ?? false;
+    _themeData = isDark ? darkMode : lightMode;
+    notifyListeners();
+  }
+
+  // Save theme preference
+  Future<void> _saveThemePreference(bool isDark) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_themePreferenceKey, isDark);
+  }
 
   set themeData(ThemeData themeData) {
     _themeData = themeData;
+    _saveThemePreference(_themeData == darkMode);
     notifyListeners();
   }
 
   ThemeData get themeData => _themeData;
+
   bool isDarkMode() {
     return _themeData == darkMode;
   }

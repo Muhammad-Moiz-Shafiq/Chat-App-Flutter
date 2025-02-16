@@ -3,7 +3,7 @@ import 'package:flash_chat/services/auth/auth_services.dart';
 import 'package:flash_chat/screens/chat_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../Components/drawer.dart';
 import '../Components/userTile.dart';
@@ -23,10 +23,10 @@ class _HomePageState extends State<HomePage> {
   late final loggedInUser;
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
-  
+
   // Cache for user data
   final Map<String, Map<String, dynamic>> _userCache = {};
-  
+
   // Stream controllers
   late Stream<QuerySnapshot> _messagesStream;
   late Stream<QuerySnapshot> _usersStream;
@@ -53,10 +53,27 @@ class _HomePageState extends State<HomePage> {
         .collection('messages')
         .orderBy('timestamp', descending: true)
         .snapshots();
-    _usersStream = _firestore
-        .collection('users')
-        .orderBy('name')
-        .snapshots();
+    _usersStream = _firestore.collection('users').orderBy('name').snapshots();
+
+    // Update FCM token when homepage is mounted
+    _updateFCMToken();
+  }
+
+  Future<void> _updateFCMToken() async {
+    if (loggedInUser != null) {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        await _firestore
+            .collection('users')
+            .where('email', isEqualTo: loggedInUser.email)
+            .get()
+            .then((docs) {
+          if (docs.docs.isNotEmpty) {
+            docs.docs.first.reference.update({'fcmToken': token});
+          }
+        });
+      }
+    }
   }
 
   StreamBuilder<QuerySnapshot> searchUsers(String query) {
@@ -117,7 +134,7 @@ class _HomePageState extends State<HomePage> {
 
     for (var entry in latestMessages.entries) {
       Map<String, dynamic>? userData;
-      
+
       // Check cache first
       if (_userCache.containsKey(entry.key)) {
         userData = _userCache[entry.key];
@@ -189,7 +206,6 @@ class _HomePageState extends State<HomePage> {
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop(true);
-                    AuthService().signOut();
                     SystemNavigator.pop(); // Exit the app
                   },
                   child: Text(
@@ -273,22 +289,28 @@ class _HomePageState extends State<HomePage> {
                         final messages = snapshot.data?.docs;
 
                         for (var message in messages!) {
-                          final messageData = message.data() as Map<String, dynamic>;
+                          final messageData =
+                              message.data() as Map<String, dynamic>;
                           final sender = messageData['sender'];
                           final receiver = messageData['receiver'];
                           final currentUserEmail = loggedInUser?.email;
 
-                          if (sender != currentUserEmail && receiver != currentUserEmail) {
+                          if (sender != currentUserEmail &&
+                              receiver != currentUserEmail) {
                             continue;
                           }
 
-                          final otherUser = sender == currentUserEmail ? receiver : sender;
+                          final otherUser =
+                              sender == currentUserEmail ? receiver : sender;
 
                           if (!latestMessages.containsKey(otherUser) ||
                               (messageData['timestamp'] != null &&
-                                  (latestMessages[otherUser]!['timestamp'] == null ||
+                                  (latestMessages[otherUser]!['timestamp'] ==
+                                          null ||
                                       messageData['timestamp'].toDate().isAfter(
-                                          latestMessages[otherUser]!['timestamp'].toDate())))) {
+                                          latestMessages[otherUser]![
+                                                  'timestamp']
+                                              .toDate())))) {
                             latestMessages[otherUser] = messageData;
                           }
                         }

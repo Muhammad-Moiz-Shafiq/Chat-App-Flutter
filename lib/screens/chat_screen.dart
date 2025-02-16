@@ -18,7 +18,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final messageTextController = TextEditingController();
   final _auth = FirebaseAuth.instance;
-  late String message;
+  late String message = '';
 
   @override
   void initState() {
@@ -31,7 +31,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final user = _auth.currentUser;
       if (user != null) {
         loggedInUser = user;
-        print(loggedInUser.email);
+        // print(loggedInUser.email);
       }
     } catch (e) {
       print(e);
@@ -113,28 +113,35 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: TextField(
                       controller: messageTextController,
                       onChanged: (value) {
-                        message = value;
+                        setState(() {
+                          message = value;
+                        });
                       },
                       decoration: kMessageTextFieldDecoration,
                     ),
                   ),
                   TextButton(
-                    onPressed: () {
-                      messageTextController.clear();
-                      //print(FieldValue.serverTimestamp().);
-                      //storing data to fireStore database
-                      try {
-                        _firestore.collection('messages').add({
-                          'text': message,
-                          'sender': loggedInUser.email,
-                          'receiver': widget.senderEmail,
-                          'timestamp': FieldValue.serverTimestamp(),
-                        });
-                      } catch (e) {
-                        print(e);
-                      }
-                      //Implemented send functionality.
-                    },
+                    onPressed: message == ''
+                        ? () {}
+                        : () {
+                            messageTextController.clear();
+                            //print(FieldValue.serverTimestamp().);
+                            //storing data to fireStore database
+                            try {
+                              _firestore.collection('messages').add({
+                                'text': message,
+                                'sender': loggedInUser.email,
+                                'receiver': widget.senderEmail,
+                                'timestamp': FieldValue.serverTimestamp(),
+                              });
+                              setState(() {
+                                message = '';
+                              });
+                            } catch (e) {
+                              print(e);
+                            }
+                            //Implemented send functionality.
+                          },
                     child: Text(
                       'Send',
                       style: kSendButtonTextStyle,

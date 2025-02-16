@@ -65,6 +65,20 @@ class AuthService {
   // sign out
   Future signOut() async {
     try {
+      // Clear FCM token before signing out
+      final user = _auth.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .where('email', isEqualTo: user.email)
+            .get()
+            .then((docs) {
+          if (docs.docs.isNotEmpty) {
+            docs.docs.first.reference.update({'fcmToken': null});
+          }
+        });
+      }
+      
       return await _auth.signOut();
     } catch (e) {
       print(e.toString());

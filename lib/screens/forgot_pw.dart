@@ -41,7 +41,7 @@ class _ResetMenuState extends State<ResetMenu> {
       padding: const EdgeInsets.all(25.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             'Enter your email and we will send you a reset password link:',

@@ -48,6 +48,8 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     getCurrentUser();
+    // Update FCM token when homepage is mounted
+    AuthService().updateExistingUserTokens();
     // Initialize streams
     _messagesStream = _firestore
         .collection('messages')
@@ -55,26 +57,9 @@ class _HomePageState extends State<HomePage> {
         .snapshots();
     _usersStream = _firestore.collection('users').orderBy('name').snapshots();
 
-    // Update FCM token when homepage is mounted
-    _updateFCMToken();
   }
 
-  Future<void> _updateFCMToken() async {
-    if (loggedInUser != null) {
-      final token = await FirebaseMessaging.instance.getToken();
-      if (token != null) {
-        await _firestore
-            .collection('users')
-            .where('email', isEqualTo: loggedInUser.email)
-            .get()
-            .then((docs) {
-          if (docs.docs.isNotEmpty) {
-            docs.docs.first.reference.update({'fcmToken': token});
-          }
-        });
-      }
-    }
-  }
+
 
   StreamBuilder<QuerySnapshot> searchUsers(String query) {
     return StreamBuilder<QuerySnapshot>(

@@ -11,40 +11,41 @@ exports.sendMessageNotification = onDocumentCreated(
         const message = event.data.data();
         
         try {
-            // Get receiver's FCM token from users collection
             const db = event.data.ref.firestore;
-            const userDoc = await db
+            
+            // Get receiver's details and check if they're logged in
+            const receiverQuery = await db
                 .collection("users")
                 .where("email", "==", message.receiver)
                 .get();
 
-            if (userDoc.empty) {
-                console.log('No matching user found');
+            if (receiverQuery.empty) {
+                console.log('No matching receiver found');
                 return;
             }
 
-            const receiverData = userDoc.docs[0].data();
-            const fcmToken = receiverData.fcmToken;
-
-            if (!fcmToken) {
-                console.log('No FCM token found for user');
+            const receiverData = receiverQuery.docs[0].data();
+            
+            // Check if receiver is logged in and has FCM token
+            if (!receiverData.isLoggedIn || !receiverData.fcmToken) {
+                console.log('Receiver is not logged in or has no FCM token');
                 return;
             }
 
             // Get sender's name
-            const senderDoc = await db
+            const senderQuery = await db
                 .collection("users")
                 .where("email", "==", message.sender)
                 .get();
 
-            if (senderDoc.empty) {
+            if (senderQuery.empty) {
                 console.log('No matching sender found');
                 return;
             }
 
-            const senderName = senderDoc.docs[0].data().name;
+            const senderName = senderQuery.docs[0].data().name;
 
-            // Prepare notification
+            // Send notification only if receiver is logged in
             const payload = {
                 notification: {
                     title: senderName,
@@ -56,12 +57,12 @@ exports.sendMessageNotification = onDocumentCreated(
                     senderName: senderName,
                     click_action: 'FLUTTER_NOTIFICATION_CLICK',
                 },
-                token: fcmToken,
+                token: receiverData.fcmToken,
             };
 
             // Send notification
             await getMessaging().send(payload);
-            console.log('Notification sent successfully');
+            console.log('Notification sent successfully to logged in user');
         } catch (error) {
             console.error('Error sending notification:', error);
         }

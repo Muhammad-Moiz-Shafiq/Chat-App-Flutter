@@ -38,14 +38,10 @@ Please obtain these files from your Firebase Console and add them to your local 
 
 ## SneakPeek
 
-![IMG-20250224-WA0003](https://github.com/user-attachments/assets/d9de022f-fc45-4542-bcc2-98a0798bf1cf)
+![Screenshot 2025-02-25 194753](https://github.com/user-attachments/assets/3f259fd1-6be8-4631-88ac-5f4018543108)
 
-![IMG-20250224-WA0005](https://github.com/user-attachments/assets/4a9230cd-c11a-42ed-b3f7-12a842910123)
 
-![IMG-20250224-WA0001](https://github.com/user-attachments/assets/40bda7eb-2064-4d68-923e-968adfba44a0)
+## Dark Mode: 
 
-![IMG-20250224-WA0006](https://github.com/user-attachments/assets/9373d051-6d2c-4f2e-9931-fca4f737171b)
+![Screenshot 2025-02-25 195127](https://github.com/user-attachments/assets/9689339e-3684-4234-b091-8b73dfd1d126)
 
-Dark Mode: 
-
-![IMG-20250224-WA0002](https://github.com/user-attachments/assets/b2e1b955-6e67-4026-9a4d-b2b9761496c3)
